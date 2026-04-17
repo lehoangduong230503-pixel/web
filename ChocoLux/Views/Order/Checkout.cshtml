@@ -1,0 +1,237 @@
+﻿@{
+    var isVi = System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName == "vi";
+    ViewData["Title"] = isVi ? "Thanh toán" : "Checkout";
+    var user = ViewBag.User as ChocoLux.Models.User;
+    var addresses = ViewBag.Addresses as List<ChocoLux.Models.Address> ?? new();
+    var zones = ViewBag.ShippingZones as List<ChocoLux.Models.ShippingZone> ?? new();
+    var defaultAddr = addresses.FirstOrDefault(a => a.IsDefault) ?? addresses.FirstOrDefault();
+}
+
+<div class="container my-5">
+    <h2 class="fw-bold mb-4" style="color:var(--choco-primary);">
+        @(isVi ? "Xác nhận đơn hàng" : "Order Confirmation")
+    </h2>
+
+    <div class="row g-4">
+        <!-- THÔNG TIN GIAO HÀNG -->
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">@(isVi ? "Thông tin giao hàng" : "Delivery Information")</h5>
+                    <form id="checkout-form">
+                        @Html.AntiForgeryToken()
+
+                        @if (addresses.Any())
+                        {
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">@(isVi ? "Chọn địa chỉ đã lưu" : "Choose Saved Address")</label>
+                                <select id="savedAddressSelect" class="form-select">
+                                    @foreach (var addr in addresses)
+                                    {
+                                        <option value="@addr.Id"
+                                                data-detail="@addr.AddressDetail"
+                                                data-cityid="@addr.CityId"
+                                                data-city="@addr.City?.CityNameVi"
+                                                selected="@(addr.IsDefault ? "selected" : null)">
+                                            @addr.City?.CityNameVi — @addr.AddressDetail @(addr.IsDefault ? (isVi ? " (Mặc định)" : " (Default)") : "")
+                                        </option>
+                                    }
+                                    <option value="">-- @(isVi ? "Nhập địa chỉ mới" : "Enter new address") --</option>
+                                </select>
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">@(isVi ? "Họ tên người nhận" : "Recipient Name")</label>
+                            <input type="text" id="recipientName" class="form-control"
+                                   value="@(user?.FullName ?? "")" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">@(isVi ? "Số điện thoại" : "Phone Number")</label>
+                            <input type="text" id="recipientPhone" class="form-control"
+                                   value="@(user?.Phone ?? "")" required />
+                        </div>
+
+                        <!-- FIX: tách thành Tỉnh/TP + Địa chỉ chi tiết -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">@(isVi ? "Tỉnh / Thành phố" : "City / Province")</label>
+                            <select id="shippingCity" class="form-select" required>
+                                <option value="">-- @(isVi ? "Chọn tỉnh thành" : "Select city") --</option>
+                                @foreach (var z in zones)
+                                {
+                                    <option value="@z.Id"
+                                            data-fee="@z.Fee"
+                                            data-name="@(isVi ? z.CityNameVi : z.CityName)"
+                                            selected="@(defaultAddr?.CityId == z.Id)">
+                                        @(isVi ? z.CityNameVi : z.CityName)
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">@(isVi ? "Địa chỉ chi tiết" : "Detailed Address")</label>
+                            <input type="text" id="shippingDetail" class="form-control"
+                                   placeholder="@(isVi ? "Số nhà, đường, phường/xã..." : "House number, street, ward...")"
+                                   value="@(defaultAddr?.AddressDetail ?? "")" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">@(isVi ? "Phương thức thanh toán" : "Payment Method")</label>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="paymentMethod"
+                                       id="cod" value="COD" checked />
+                                <label class="form-check-label" for="cod">
+                                    <i class="bi bi-cash-coin"></i> @(isVi ? "Thanh toán khi nhận hàng (COD)" : "Cash on Delivery (COD)")
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod"
+                                       id="vnpay" value="VNPay" />
+                                <label class="form-check-label" for="vnpay">
+                                    <img src="https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-VNPAY-QR-1.png"
+                                         height="24" class="me-1" alt="VNPay" />
+                                    @(isVi ? "Thanh toán qua VNPay" : "Pay via VNPay")
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- TÓM TẮT ĐƠN HÀNG -->
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">@(isVi ? "Tóm tắt đơn hàng" : "Order Summary")</h5>
+                    <div id="order-summary">@(isVi ? "Đang tải..." : "Loading...")</div>
+                    <hr />
+                    <!-- FIX: hiển thị đủ tạm tính, thuế, ship, tổng -->
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">@(isVi ? "Tạm tính:" : "Subtotal:")</span>
+                        <span id="order-subtotal">0 ₫</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">@(isVi ? "Thuế VAT (8%):" : "VAT (8%):")</span>
+                        <span id="order-vat">0 ₫</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">@(isVi ? "Phí vận chuyển:" : "Shipping fee:")</span>
+                        <span id="order-shipping">30.000 ₫</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between fw-bold fs-5">
+                        <span>@(isVi ? "Tổng cộng:" : "Total:")</span>
+                        <span id="order-total" style="color:var(--choco-accent);">0 ₫</span>
+                    </div>
+                    <button class="btn btn-primary-choco w-100 mt-3 py-2 fw-bold" id="btn-place-order">
+                        <i class="bi bi-check-circle"></i> @(isVi ? "Đặt hàng" : "Place Order")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    var VAT_RATE = 0.08;
+    var BASE_SHIPPING = 30000;
+    var cartSubtotal = 0;
+    var requiredMsg = '@Html.Raw(isVi ? "Vui lòng điền đầy đủ thông tin!" : "Please fill in all required fields!")';
+    var vnpayErrorMsg = '@Html.Raw(isVi ? "Không thể tạo thanh toán VNPay!" : "Cannot create VNPay payment!")';
+
+    function recalcTotals() {
+        var selectedCity = $('#shippingCity option:selected');
+        var shippingFee = parseFloat(selectedCity.data('fee')) || BASE_SHIPPING;
+        var vatAmount = cartSubtotal * VAT_RATE;
+        var total = cartSubtotal + vatAmount + shippingFee;
+
+        $('#order-subtotal').text(cartSubtotal.toLocaleString('vi-VN') + ' ₫');
+        $('#order-vat').text(vatAmount.toLocaleString('vi-VN') + ' ₫');
+        $('#order-shipping').text(shippingFee.toLocaleString('vi-VN') + ' ₫');
+        $('#order-total').text(total.toLocaleString('vi-VN') + ' ₫');
+    }
+
+    $.get('/Cart/GetCart', function (data) {
+        var items = data.items;
+        if (!items || items.length === 0) {
+            window.location.href = '/Cart';
+            return;
+        }
+        var html = '';
+        items.forEach(function (item) {
+            html += `<div class="d-flex justify-content-between mb-2">
+                <span>${item.name} x${item.quantity}</span>
+                <span>${(item.price * item.quantity).toLocaleString('vi-VN')} ₫</span>
+            </div>`;
+        });
+        cartSubtotal = data.total;
+        $('#order-summary').html(html);
+        recalcTotals();
+    });
+
+    $('#shippingCity').on('change', function () {
+        recalcTotals();
+    });
+
+    // Khi chọn địa chỉ đã lưu → điền vào các ô riêng
+    $('#savedAddressSelect').on('change', function () {
+        var selected = $(this).find(':selected');
+        var detail = selected.data('detail');
+        var cityId = selected.data('cityid');
+        if (detail && cityId) {
+            $('#shippingDetail').val(detail);
+            $('#shippingCity').val(cityId);
+            recalcTotals();
+        } else {
+            $('#shippingDetail').val('');
+        }
+    });
+
+    $('#btn-place-order').click(function () {
+        var recipientName   = $('#recipientName').val().trim();
+        var recipientPhone  = $('#recipientPhone').val().trim();
+        var shippingZoneId  = parseInt($('#shippingCity').val() || '0');
+        var cityName        = $('#shippingCity option:selected').data('name') || '';
+        var detail          = $('#shippingDetail').val().trim();
+        var shippingAddress = detail + (cityName ? ', ' + cityName : '');
+        var paymentMethod   = $('input[name="paymentMethod"]:checked').val();
+        var token           = $('input[name="__RequestVerificationToken"]').val();
+
+        if (!recipientName || !recipientPhone || !detail || !$('#shippingCity').val()) {
+            alert(requiredMsg);
+            return;
+        }
+
+        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>@(isVi ? "Đang xử lý..." : "Processing...")');
+
+        if (paymentMethod === 'VNPay') {
+            $.post('/Order/CreateVnpayPayment', {
+                recipientName, recipientPhone, shippingAddress, shippingZoneId,
+                __RequestVerificationToken: token
+            }, function (res) {
+                if (res.success && res.paymentUrl) {
+                    window.location.href = res.paymentUrl;
+                } else {
+                    alert(res.message || vnpayErrorMsg);
+                    $('#btn-place-order').prop('disabled', false).html('<i class="bi bi-check-circle"></i> @(isVi ? "Đặt hàng" : "Place Order")');
+                }
+            });
+        } else {
+            $.post('/Order/PlaceOrder', {
+                recipientName, recipientPhone, shippingAddress, shippingZoneId, paymentMethod,
+                __RequestVerificationToken: token
+            }, function (res) {
+                if (res.success) {
+                    // FIX: redirect sang MyOrders với thông báo đặt thành công
+                    window.location.href = '/Order/MyOrders?newOrder=1';
+                } else {
+                    alert(res.message);
+                    $('#btn-place-order').prop('disabled', false).html('<i class="bi bi-check-circle"></i> @(isVi ? "Đặt hàng" : "Place Order")');
+                }
+            });
+        }
+    });
+</script>
+}

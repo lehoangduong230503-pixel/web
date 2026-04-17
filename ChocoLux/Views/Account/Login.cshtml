@@ -1,0 +1,55 @@
+﻿@model ChocoLux.ViewModels.LoginViewModel
+@{
+    var isVi = System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName == "vi";
+    ViewData["Title"] = isVi ? "Đăng nhập" : "Login";
+}
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold text-center mb-4" style="color:var(--choco-primary);">
+                        @(isVi ? "Đăng nhập" : "Login")
+                    </h4>
+                    <form asp-action="Login" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="ReturnUrl" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            <input asp-for="Email" class="form-control" placeholder="email@example.com" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">@(isVi ? "Mật khẩu" : "Password")</label>
+                            <input asp-for="Password" class="form-control" placeholder="@(isVi ? "Mật khẩu" : "Password")" />
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input asp-for="RememberMe" class="form-check-input" />
+                            <label asp-for="RememberMe" class="form-check-label">
+                                @(isVi ? "Ghi nhớ đăng nhập" : "Remember me")
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary-choco w-100 py-2 fw-bold">
+                            @(isVi ? "Đăng nhập" : "Login")
+                        </button>
+                    </form>
+                    <p class="text-center mt-3 small">
+                        @(isVi ? "Chưa có tài khoản?" : "Don't have an account?")
+                        <a asp-action="Register" style="color:var(--choco-accent);">
+                            @(isVi ? "Đăng ký ngay" : "Register now")
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

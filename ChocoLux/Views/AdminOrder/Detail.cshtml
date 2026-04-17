@@ -1,0 +1,73 @@
+@model ChocoLux.Models.Order
+@{
+    var isVi = System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName == "vi";
+    ViewData["Title"] = isVi ? "Chi tiết đơn hàng" : "Order Detail";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">#@Model.OrderCode</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> @(isVi ? "Quay lại" : "Back")
+    </a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">@(isVi ? "Thông tin nhận hàng" : "Delivery Information")</h6>
+                <div><strong>@(isVi ? "Người nhận" : "Recipient"):</strong> @Model.RecipientName</div>
+                <div><strong>@(isVi ? "SĐT" : "Phone"):</strong> @Model.RecipientPhone</div>
+                <div><strong>@(isVi ? "Địa chỉ" : "Address"):</strong> @Model.ShippingAddressSnapshot</div>
+                <div><strong>@(isVi ? "Ngày đặt" : "Created"):</strong> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">@(isVi ? "Thanh toán" : "Payment")</h6>
+                @{
+                    var payLabel = Model.Payment?.PaymentMethod switch
+                    {
+                        "COD" => "COD",
+                        "VNPay" => "VNPay",
+                        _ => ""
+                    };
+                }
+                <div><strong>@(isVi ? "Phương thức" : "Method"):</strong> @payLabel</div>
+                <div><strong>@(isVi ? "Tạm tính" : "Subtotal"):</strong> @Model.Subtotal.ToString("N0") ₫</div>
+                <div><strong>VAT:</strong> @Model.VatAmount.ToString("N0") ₫</div>
+                <div><strong>@(isVi ? "Phí ship" : "Shipping"):</strong> @Model.ShippingFee.ToString("N0") ₫</div>
+                <div class="fw-bold mt-1"><strong>@(isVi ? "Tổng" : "Total"):</strong> @Model.TotalAmount.ToString("N0") ₫</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table mb-0 align-middle">
+            <thead style="background:#f8f0e8;">
+                <tr>
+                    <th>@(isVi ? "Sản phẩm" : "Product")</th>
+                    <th class="text-end">@(isVi ? "Đơn giá" : "Price")</th>
+                    <th class="text-center">@(isVi ? "SL" : "Qty")</th>
+                    <th class="text-end">@(isVi ? "Thành tiền" : "Subtotal")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.OrderItems)
+                {
+                    <tr>
+                        <td>@(item.Product?.Name ?? $"#{item.ProductId}")</td>
+                        <td class="text-end">@item.PriceAtPurchase.ToString("N0") ₫</td>
+                        <td class="text-center">@item.Quantity</td>
+                        <td class="text-end fw-bold">@((item.PriceAtPurchase * item.Quantity).ToString("N0")) ₫</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

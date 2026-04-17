@@ -1,0 +1,94 @@
+﻿@model X.PagedList.IPagedList<Order>
+@using X.PagedList.Mvc.Core
+@{
+    var isVi = System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName == "vi";
+    ViewData["Title"] = isVi ? "Quản lý đơn hàng" : "Order Management";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <form method="get" class="d-flex gap-2">
+        <select name="status" class="form-select" style="width:200px;">
+            <option value="">@(isVi ? "Tất cả trạng thái" : "All statuses")</option>
+            <option value="Pending" selected="@(ViewBag.Status == "Pending")">@(isVi ? "Chờ xử lý" : "Pending")</option>
+            <option value="Confirmed" selected="@(ViewBag.Status == "Confirmed")">@(isVi ? "Đã xử lý" : "Processed")</option>
+        </select>
+        <button class="btn btn-outline-secondary">@(isVi ? "Lọc" : "Filter")</button>
+    </form>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead style="background:#f8f0e8;">
+                <tr>
+                    <th>@(isVi ? "Mã đơn" : "Order Code")</th>
+                    <th>@(isVi ? "Khách hàng" : "Customer")</th>
+                    <th>@(isVi ? "SĐT" : "Phone")</th>
+                    <th>@(isVi ? "Tổng tiền" : "Total")</th>
+                    <th>@(isVi ? "Thanh toán" : "Payment")</th>
+                    <th>@(isVi ? "Trạng thái" : "Status")</th>
+                    <th>@(isVi ? "Ngày đặt" : "Date")</th>
+                    <th>@(isVi ? "Thao tác" : "Action")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var o in Model)
+                {
+                    var isProcessed = o.OrderStatus == "Confirmed";
+                    var statusBadge = isProcessed
+                        ? (isVi ? "<span class='badge bg-primary'>Đã xử lý</span>" : "<span class='badge bg-primary'>Processed</span>")
+                        : (isVi ? "<span class='badge bg-warning text-dark'>Chờ xử lý</span>" : "<span class='badge bg-warning text-dark'>Pending</span>");
+                    var paymentMethod = o.Payment?.PaymentMethod;
+                    var payMethodLabel = paymentMethod == "VNPay" ? "VNPay"
+                        : paymentMethod == "COD" ? "COD"
+                        : "";
+                    <tr>
+                        <td class="fw-bold">#@o.OrderCode</td>
+                        <td>@o.RecipientName</td>
+                        <td>@o.RecipientPhone</td>
+                        <td style="color:var(--choco-accent);font-weight:600;">@o.TotalAmount.ToString("N0") ₫</td>
+                        <td>@payMethodLabel</td>
+                        <td>@Html.Raw(statusBadge)</td>
+                        <td>@o.CreatedAt.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            <a asp-action="Detail" asp-route-id="@o.Id" class="btn btn-sm btn-outline-primary me-1">
+                                <i class="bi bi-eye"></i> @(isVi ? "Chi tiết" : "Detail")
+                            </a>
+                            @if (!isProcessed)
+                            {
+                                <button class="btn btn-sm btn-success btn-process" data-id="@o.Id">
+                                    <i class="bi bi-check-lg"></i> @(isVi ? "Xử lý" : "Process")
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="d-flex justify-content-center mt-4">
+    @Html.PagedListPager(Model, page => Url.Action("Index", new { page, status = ViewBag.Status }),
+        new PagedListRenderOptions
+        {
+            LiElementClasses = new[] { "page-item" },
+            PageClasses = new[] { "page-link" },
+            UlElementClasses = new[] { "pagination" }
+        })
+</div>
+
+@section Scripts {
+    <script>
+        $('.btn-process').click(function () {
+            var id = $(this).data('id');
+            var msg = '@Html.Raw(isVi ? "Xác nhận xử lý đơn hàng này?" : "Confirm processing this order?")';
+            if (!confirm(msg)) return;
+            $.post('/AdminOrder/UpdateStatus', { id: id, status: 'Confirmed' }, function (res) {
+                if (res.success) location.reload();
+                else alert('@Html.Raw(isVi ? "Cập nhật thất bại!" : "Update failed!")');
+            });
+        });
+    </script>
+}

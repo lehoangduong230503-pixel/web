@@ -1,0 +1,135 @@
+﻿@model X.PagedList.IPagedList<Product>
+@using X.PagedList.Mvc.Core
+@{
+    ViewData["Title"] = "Quản lý sản phẩm";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+@Html.AntiForgeryToken()
+
+@section SidebarActions {
+    <a id="sidebar-edit-product" class="btn-side-action" href="#" aria-disabled="true" onclick="return false;">
+        <i class="bi bi-pencil-square"></i> Sửa sản phẩm
+    </a>
+    <button id="sidebar-delete-product" type="button" class="btn-side-action" disabled>
+        <i class="bi bi-trash"></i> Xóa sản phẩm
+    </button>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+        <input type="text" name="search" value="@ViewBag.Search" class="form-control"
+               placeholder="Tìm sản phẩm..." style="width:250px;" />
+        <select name="sort" class="form-select" style="width:260px;">
+            <option value="">Sắp xếp mặc định</option>
+            <option value="remain_asc" selected="@(ViewBag.Sort?.ToString() == "remain_asc")">Còn lại: ít → nhiều</option>
+            <option value="remain_desc" selected="@(ViewBag.Sort?.ToString() == "remain_desc")">Còn lại: nhiều → ít</option>
+            <option value="sold_asc" selected="@(ViewBag.Sort?.ToString() == "sold_asc")">Đã bán: ít → nhiều</option>
+            <option value="sold_desc" selected="@(ViewBag.Sort?.ToString() == "sold_desc")">Đã bán: nhiều → ít</option>
+        </select>
+        <button class="btn btn-outline-secondary">Tìm</button>
+    </form>
+    <span class="text-muted small">Chọn 1 dòng để Sửa/Xóa ở menu trái</span>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead style="background:#f8f0e8;">
+                <tr>
+                    <th>Ảnh</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Danh mục</th>
+                    <th>Xuất xứ</th>
+                    <th>Giá</th>
+                    <th>Còn lại</th>
+                    <th>Đã bán</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    var remaining = p.TotalStock - p.SoldCount;
+                    if (remaining < 0) remaining = 0;
+                    <tr class="product-row" data-id="@p.Id" style="cursor:pointer;">
+                        <td>
+                            <img src="@p.MainImage" style="width:50px;height:50px;object-fit:cover;border-radius:6px;" />
+                        </td>
+                        <td class="fw-bold">@p.Name</td>
+                        <td>@p.Category.CategoryName</td>
+                        <td>@p.Origin.CountryName</td>
+                        <td style="color:var(--choco-accent);font-weight:600;">@p.Price.ToString("N0") ₫</td>
+                        <td>@remaining</td>
+                        <td>@p.SoldCount</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="d-flex justify-content-center mt-4">
+    @Html.PagedListPager(Model, page => Url.Action("Index", new { page, search = ViewBag.Search, sort = ViewBag.Sort }),
+        new PagedListRenderOptions
+        {
+            LiElementClasses = new[] { "page-item" },
+            PageClasses = new[] { "page-link" },
+            UlElementClasses = new[] { "pagination" }
+        })
+</div>
+
+@section Scripts {
+    <script>
+        var selectedProductId = null;
+
+        function setSidebarActions(id) {
+            selectedProductId = id;
+            var editUrl = '/AdminProduct/Edit/' + id;
+            $('#sidebar-edit-product').attr('href', editUrl).removeAttr('onclick').removeAttr('aria-disabled');
+            $('#sidebar-delete-product').prop('disabled', false);
+        }
+
+        function selectRow($row) {
+            $('.product-row').removeClass('table-active');
+            $row.addClass('table-active');
+            setSidebarActions($row.data('id'));
+        }
+
+        $('.product-row').click(function () {
+            selectRow($(this));
+        });
+
+        $('.product-row').dblclick(function () {
+            var id = $(this).data('id');
+            window.location.href = '/AdminProduct/Edit/' + id;
+        });
+
+        $(function () {
+            var $firstRow = $('.product-row').first();
+            if ($firstRow.length) {
+                selectRow($firstRow);
+            }
+        });
+
+        $('#sidebar-delete-product').click(function () {
+            if (!selectedProductId) return;
+            if (!confirm('Xóa sản phẩm này?')) return;
+
+            $.ajax({
+                url: '/AdminProduct/Delete',
+                type: 'POST',
+                data: {
+                    id: selectedProductId,
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function (res) {
+                    if (res.success) location.reload();
+                    else alert('Xóa thất bại!');
+                },
+                error: function () {
+                    alert('Lỗi kết nối, vui lòng thử lại!');
+                }
+            });
+        });
+    </script>
+}

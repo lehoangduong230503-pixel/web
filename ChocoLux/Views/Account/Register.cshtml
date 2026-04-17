@@ -1,0 +1,83 @@
+﻿@model ChocoLux.ViewModels.RegisterViewModel
+@{
+    var isVi = System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName == "vi";
+    ViewData["Title"] = isVi ? "Đăng ký" : "Register";
+    var zones = ViewBag.ShippingZones as List<ChocoLux.Models.ShippingZone> ?? new();
+}
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold text-center mb-4" style="color:var(--choco-primary);">
+                        @(isVi ? "Tạo tài khoản" : "Create Account")
+                    </h4>
+                    <form asp-action="Register" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label asp-for="FullName" class="form-label fw-bold"></label>
+                            <input asp-for="FullName" class="form-control" placeholder="@(isVi ? "Họ và tên" : "Full name")" />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label fw-bold"></label>
+                            <input asp-for="Email" class="form-control" placeholder="email@example.com" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="PhoneNumber" class="form-label fw-bold"></label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="0909 123 456" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Password" class="form-label fw-bold"></label>
+                            <input asp-for="Password" class="form-control" placeholder="@(isVi ? "Mật khẩu" : "Password")" />
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="ConfirmPassword" class="form-label fw-bold"></label>
+                            <input asp-for="ConfirmPassword" class="form-control" placeholder="@(isVi ? "Nhập lại mật khẩu" : "Confirm password")" />
+                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                        </div>
+
+                        <!-- FIX: thêm khu vực giao hàng khi đăng ký -->
+                        <hr class="my-3" />
+                        <p class="text-muted small mb-2">@(isVi ? "Địa chỉ giao hàng (tùy chọn)" : "Delivery address (optional)")</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">@(isVi ? "Tỉnh / Thành phố" : "City / Province")</label>
+                            <select name="cityId" class="form-select">
+                                <option value="">-- @(isVi ? "Chọn tỉnh thành" : "Select city") --</option>
+                                @foreach (var z in zones)
+                                {
+                                    <option value="@z.Id">@(isVi? z.CityNameVi: z.CityName)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">@(isVi ? "Địa chỉ chi tiết" : "Detailed Address")</label>
+                            <input type="text" name="addressDetail" class="form-control"
+                                   placeholder="@(isVi ? "Số nhà, đường, phường/xã..." : "House number, street, ward...")" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary-choco w-100 py-2 fw-bold">
+                            @(isVi ? "Đăng ký" : "Register")
+                        </button>
+                    </form>
+                    <p class="text-center mt-3 small">
+                        @(isVi ? "Đã có tài khoản?" : "Already have an account?")
+                        <a asp-action="Login" style="color:var(--choco-accent);">
+                            @(isVi ? "Đăng nhập" : "Login")
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -1,0 +1,127 @@
+﻿@model ChocoLux.Models.Order
+@{
+    var isVi = System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName == "vi";
+    ViewData["Title"] = isVi ? "Chi tiết đơn hàng" : "Order Detail";
+}
+
+<div class="container my-5">
+    @Html.AntiForgeryToken()
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a asp-controller="Order" asp-action="MyOrders" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> @(isVi ? "Quay lại" : "Back")
+        </a>
+        <h2 class="fw-bold mb-0" style="color:var(--choco-primary);">
+            @(isVi ? "Chi tiết đơn hàng" : "Order Detail") — @Model.OrderCode
+        </h2>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">@(isVi ? "Sản phẩm đã đặt" : "Ordered Items")</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>@(isVi ? "Sản phẩm" : "Product")</th>
+                                <th>@(isVi ? "Số lượng" : "Qty")</th>
+                                <th>@(isVi ? "Đơn giá" : "Price")</th>
+                                <th>@(isVi ? "Thành tiền" : "Total")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.OrderItems)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if (item.Product?.MainImage != null)
+                                            {
+                                                <img src="@item.Product.MainImage" style="width:48px;height:48px;object-fit:cover;border-radius:6px;" />
+                                            }
+                                            <span class="fw-bold">@item.Product?.Name</span>
+                                        </div>
+                                    </td>
+                                    <td>@item.Quantity</td>
+                                    <td>@item.PriceAtPurchase.ToString("N0") ₫</td>
+                                    <td class="fw-bold" style="color:var(--choco-accent);">
+                                        @((item.PriceAtPurchase * item.Quantity).ToString("N0")) ₫
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">@(isVi ? "Thông tin giao hàng" : "Delivery Info")</h5>
+                    <p><strong>@(isVi ? "Người nhận:" : "Recipient:")</strong> @Model.RecipientName</p>
+                    <p><strong>@(isVi ? "SĐT:" : "Phone:")</strong> @Model.RecipientPhone</p>
+                    <p><strong>@(isVi ? "Địa chỉ:" : "Address:")</strong> @Model.ShippingAddressSnapshot</p>
+                    <p><strong>@(isVi ? "Ngày đặt:" : "Order Date:")</strong> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">@(isVi ? "Tóm tắt thanh toán" : "Payment Summary")</h5>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">@(isVi ? "Tạm tính:" : "Subtotal:")</span>
+                        <span>@Model.Subtotal.ToString("N0") ₫</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">@(isVi ? "Thuế VAT (8%):" : "VAT (8%):")</span>
+                        <span>@Model.VatAmount.ToString("N0") ₫</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">@(isVi ? "Phí vận chuyển:" : "Shipping:")</span>
+                        <span>@Model.ShippingFee.ToString("N0") ₫</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between fw-bold fs-5">
+                        <span>@(isVi ? "Tổng cộng:" : "Total:")</span>
+                        <span style="color:var(--choco-accent);">@Model.TotalAmount.ToString("N0") ₫</span>
+                    </div>
+                    <hr />
+                @{
+                    var payLabel = Model.Payment?.PaymentMethod switch
+                    {
+                        "COD" => "COD",
+                        "VNPay" => "VNPay",
+                        _ => ""
+                    };
+                }
+                <p class="mb-0"><strong>@(isVi ? "Hình thức:" : "Method:")</strong> @payLabel</p>
+                </div>
+            </div>
+
+            @if (Model.OrderStatus == "Pending")
+            {
+                <button class="btn btn-outline-danger w-100 btn-cancel" data-id="@Model.Id">
+                    <i class="bi bi-x-circle"></i> @(isVi ? "Hủy đơn hàng" : "Cancel Order")
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $('.btn-cancel').click(function () {
+            var id = $(this).data('id');
+            if (!confirm('@Html.Raw(isVi ? "Bạn có chắc muốn hủy đơn hàng này?" : "Cancel this order?")')) return;
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.post('/Order/CancelOrder', { orderId: id, __RequestVerificationToken: token }, function (res) {
+                if (res.success) {
+                    window.location.href = '/Order/MyOrders';
+                } else {
+                    alert(res.message);
+                }
+            });
+        });
+    </script>
+}

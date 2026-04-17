@@ -1,0 +1,152 @@
+﻿@model Product
+@{
+    ViewData["Title"] = Model.Id == 0 ? "Thêm sản phẩm" : "Sửa sản phẩm";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+@section SidebarActions {
+    @if (Model.Id > 0)
+    {
+        <a class="btn-side-action" asp-controller="AdminProduct" asp-action="Edit" asp-route-id="@Model.Id">
+            <i class="bi bi-pencil-square"></i> Sửa sản phẩm
+        </a>
+        <button id="sidebar-delete-product" type="button" class="btn-side-action">
+            <i class="bi bi-trash"></i> Xóa sản phẩm
+        </button>
+    }
+    else
+    {
+        <a class="btn-side-action" href="#" aria-disabled="true" onclick="return false;">
+            <i class="bi bi-pencil-square"></i> Sửa sản phẩm
+        </a>
+        <button type="button" class="btn-side-action" disabled>
+            <i class="bi bi-trash"></i> Xóa sản phẩm
+        </button>
+    }
+}
+
+<div class="card border-0 shadow-sm" style="max-width:860px;">
+    <div class="card-body p-4">
+        <form asp-action="Save" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input asp-for="Id" type="hidden" />
+            <!-- giữ lại ảnh cũ nếu không upload mới -->
+            <input asp-for="MainImage" type="hidden" />
+
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label asp-for="Name" class="form-label fw-bold">Tên sản phẩm</label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Price" class="form-label fw-bold">Giá</label>
+                    <input asp-for="Price" class="form-control" type="number" min="0" />
+                    <span asp-validation-for="Price" class="text-danger small"></span>
+                </div>
+
+                <!-- FIX: thêm số lượng tồn kho -->
+                <div class="col-md-4">
+                    <label asp-for="TotalStock" class="form-label fw-bold">Số lượng tồn kho</label>
+                    <input asp-for="TotalStock" class="form-control" type="number" min="0" />
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="CategoryId" class="form-label fw-bold">Danh mục</label>
+                    <select asp-for="CategoryId" class="form-select"
+                            asp-items="@(new SelectList(ViewBag.Categories, "Id", "CategoryName"))">
+                        <option value="">-- Chọn danh mục --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="OriginId" class="form-label fw-bold">Xuất xứ</label>
+                    <select asp-for="OriginId" class="form-select"
+                            asp-items="@(new SelectList(ViewBag.Origins, "Id", "CountryName"))">
+                        <option value="">-- Chọn xuất xứ --</option>
+                    </select>
+                </div>
+
+                <!-- FIX: upload ảnh + preview -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">Ảnh sản phẩm</label>
+                    <input type="file" name="ImageFile" id="ImageFile" class="form-control" accept="image/*"
+                           onchange="previewImage(this)" />
+                    <div class="mt-2">
+                        @if (!string.IsNullOrEmpty(Model.MainImage))
+                        {
+                            <img id="imgPreview" src="@Model.MainImage" class="rounded" style="height:100px;object-fit:cover;" />
+                        }
+                        else
+                        {
+                            <img id="imgPreview" src="" class="rounded d-none" style="height:100px;object-fit:cover;" />
+                        }
+                    </div>
+                </div>
+
+                <!-- FIX: mô tả tiếng Việt -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">Mô tả</label>
+                    <textarea asp-for="DescriptionVi" id="descriptionVi" class="form-control" rows="4"></textarea>
+                </div>
+
+                <!-- FIX: mô tả tiếng Anh -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">Description</label>
+                    <textarea asp-for="Description" id="description" class="form-control" rows="4"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary-choco px-4">
+                    <i class="bi bi-save"></i> Lưu
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+    <script>
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    $('#imgPreview').attr('src', e.target.result).removeClass('d-none');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        ClassicEditor.create(document.querySelector('#descriptionVi')).catch(error => console.error(error));
+        ClassicEditor.create(document.querySelector('#description')).catch(error => console.error(error));
+
+        $('#sidebar-delete-product').click(function () {
+            if (!confirm('Xóa sản phẩm này?')) return;
+            $.ajax({
+                url: '/AdminProduct/Delete',
+                type: 'POST',
+                data: {
+                    id: @Model.Id,
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function (res) {
+                    if (res.success) {
+                        window.location.href = '/AdminProduct/Index';
+                    } else {
+                        alert('Xóa thất bại!');
+                    }
+                },
+                error: function () {
+                    alert('Lỗi kết nối, vui lòng thử lại!');
+                }
+            });
+        });
+    </script>
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

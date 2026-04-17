@@ -1,0 +1,136 @@
+﻿@{
+    var isVi = System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName == "vi";
+    ViewData["Title"] = isVi ? "Giỏ hàng" : "Cart";
+}
+
+<div class="container my-5">
+    <h2 class="fw-bold mb-4" style="color:var(--choco-primary);">
+        🛒 @(isVi ? "Giỏ hàng của bạn" : "Your Cart")
+    </h2>
+
+    <div id="cart-empty" style="display:none;" class="text-center py-5">
+        <i class="bi bi-cart-x fs-1 text-muted"></i>
+        <p class="mt-3 text-muted">
+            @(isVi ? "Giỏ hàng trống." : "Your cart is empty.")
+            <a asp-controller="Product" asp-action="Index">@(isVi ? "Mua ngay!" : "Shop now!")</a>
+        </p>
+    </div>
+
+    <div id="cart-content">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead style="background:var(--choco-primary); color:white;">
+                    <tr>
+                        <th>@(isVi ? "Sản phẩm" : "Product")</th>
+                        <th>@(isVi ? "Đơn giá" : "Unit Price")</th>
+                        <th style="width:150px;">@(isVi ? "Số lượng" : "Quantity")</th>
+                        <th>@(isVi ? "Thành tiền" : "Subtotal")</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="cart-body"></tbody>
+            </table>
+        </div>
+        <div class="d-flex justify-content-end align-items-center gap-4 mt-3">
+            <h4>@(isVi ? "Tổng cộng:" : "Total:") <span id="cart-total" class="fw-bold" style="color:var(--choco-accent);">0 ₫</span></h4>
+            @if (User.Identity != null && User.Identity.IsAuthenticated)
+            {
+                <a asp-controller="Order" asp-action="Checkout" class="btn btn-primary-choco px-4 py-2 fw-bold">
+                    @(isVi ? "Thanh toán" : "Checkout") <i class="bi bi-arrow-right"></i>
+                </a>
+            }
+            else
+            {
+                <a href="/Account/Login?returnUrl=/Order/Checkout" class="btn btn-primary-choco px-4 py-2 fw-bold">
+                    @(isVi ? "Thanh toán" : "Checkout") <i class="bi bi-arrow-right"></i>
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function loadCart() {
+            $.get('/Cart/GetCart', function (data) {
+                var items = data.items;
+                // Cập nhật badge trên navbar
+                updateCartBadge(data.totalItems || 0);
+
+                if (!items || items.length === 0) {
+                    $('#cart-content').hide();
+                    $('#cart-empty').show();
+                    return;
+                }
+                $('#cart-empty').hide();
+                $('#cart-content').show();
+
+                var html = '';
+                items.forEach(function (item) {
+                    html += `
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="${item.imageUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;" />
+                                    <span class="fw-bold">${item.name}</span>
+                                </div>
+                            </td>
+                            <td>${item.price.toLocaleString('vi-VN')} ₫</td>
+                            <td>
+                                <div class="input-group input-group-sm" style="width:110px;">
+                                    <button class="btn btn-outline-secondary btn-qty-minus" data-id="${item.productId}">-</button>
+                                    <input type="number" class="form-control text-center qty-input"
+                                           value="${item.quantity}" min="1" data-id="${item.productId}" />
+                                    <button class="btn btn-outline-secondary btn-qty-plus" data-id="${item.productId}">+</button>
+                                </div>
+                            </td>
+                            <td class="fw-bold" style="color:var(--choco-accent);">${(item.price * item.quantity).toLocaleString('vi-VN')} ₫</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger btn-remove" data-id="${item.productId}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+                $('#cart-body').html(html);
+                $('#cart-total').text(data.total.toLocaleString('vi-VN') + ' ₫');
+                bindEvents();
+            });
+        }
+
+        function bindEvents() {
+            $('.btn-qty-plus').click(function () {
+                var id = $(this).data('id');
+                var input = $('.qty-input[data-id="' + id + '"]');
+                updateQty(id, parseInt(input.val()) + 1);
+            });
+            $('.btn-qty-minus').click(function () {
+                var id = $(this).data('id');
+                var input = $('.qty-input[data-id="' + id + '"]');
+                var newVal = parseInt(input.val()) - 1;
+                if (newVal < 1) return;
+                updateQty(id, newVal);
+            });
+            $('.btn-remove').click(function () {
+                var id = $(this).data('id');
+                $.post('/Cart/Remove', { productId: id }, function(res) {
+                    if (res.success) {
+                        updateCartBadge(res.cartCount || 0);
+                        loadCart();
+                    }
+                });
+            });
+        }
+
+        function updateQty(productId, quantity) {
+            $.post('/Cart/Update', { productId: productId, quantity: quantity }, function(res) {
+                if (res.success) {
+                    updateCartBadge(res.cartCount || 0);
+                    loadCart();
+                }
+            });
+        }
+
+        loadCart();
+    </script>
+}

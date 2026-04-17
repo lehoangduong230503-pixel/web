@@ -1,0 +1,160 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ChocoLux Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    <style>
+        :root { --choco-primary: #4a2c2a; --choco-accent: #c8860a; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f0eb; }
+        .admin-sidebar {
+            width: 240px; min-height: 100vh;
+            background: var(--choco-primary);
+            position: fixed; top: 0; left: 0; z-index: 100;
+            display: flex; flex-direction: column;
+        }
+        .admin-sidebar .brand {
+            padding: 20px 24px; font-size: 1.3rem; font-weight: 700;
+            color: var(--choco-accent); border-bottom: 1px solid #6b3d3a;
+            text-decoration: none; display: block;
+        }
+        .admin-sidebar .nav-link {
+            color: #f5e6d3 !important; padding: 12px 24px; font-size: 0.95rem;
+            border-left: 3px solid transparent; transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .admin-sidebar .nav-link:hover,
+        .admin-sidebar .nav-link.active {
+            background: rgba(200,134,10,0.15);
+            border-left-color: var(--choco-accent);
+            color: var(--choco-accent) !important;
+        }
+        .btn-add-product {
+            margin: 6px 16px 4px;
+            background: transparent;
+            color: #f5e6d3;
+            border: 1px solid rgba(245,230,211,0.45);
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-add-product:hover {
+            color: var(--choco-accent);
+            border-color: var(--choco-accent);
+            background: rgba(200,134,10,0.15);
+        }
+        .btn-side-action {
+            margin: 6px 16px 0;
+            background: transparent;
+            color: #f5e6d3;
+            border: 1px solid rgba(245,230,211,0.45);
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-side-action:hover {
+            color: var(--choco-accent);
+            border-color: var(--choco-accent);
+            background: rgba(200,134,10,0.15);
+        }
+        .btn-side-action:disabled {
+            opacity: .5;
+            pointer-events: none;
+        }
+        .admin-main { margin-left: 240px; min-height: 100vh; display: flex; flex-direction: column; }
+        .admin-topbar {
+            background: white; border-bottom: 1px solid #e5d5c5;
+            padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 50;
+        }
+        .admin-content { padding: 28px; flex: 1; }
+        .btn-primary-choco { background-color: var(--choco-primary); color: white; border: none; }
+        .btn-primary-choco:hover { background-color: var(--choco-accent); color: white; }
+        @@media (max-width: 768px) {
+            .admin-sidebar { width: 100%; min-height: auto; position: relative; }
+            .admin-main { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+@{
+    var currentPath = Context.Request.Path + Context.Request.QueryString;
+    var langLabel = System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName.ToUpper();
+    var isVi = System.Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName == "vi";
+}
+
+<div class="admin-sidebar">
+    <a class="brand" asp-controller="Home" asp-action="Index">ChocoLux Admin</a>
+    <nav class="mt-2 flex-grow-1">
+        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AdminProduct" ? "active" : "")"
+           asp-controller="AdminProduct" asp-action="Index">
+            <i class="bi bi-box-seam"></i> @(isVi ? "Sản phẩm" : "Products")
+        </a>
+        <a class="btn-add-product" asp-controller="AdminProduct" asp-action="Create">
+            <i class="bi bi-plus-circle"></i> @(isVi ? "Thêm sản phẩm" : "Add Product")
+        </a>
+        @await RenderSectionAsync("SidebarActions", required: false)
+        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AdminOrder" ? "active" : "")"
+           asp-controller="AdminOrder" asp-action="Index">
+            <i class="bi bi-receipt"></i> @(isVi ? "Đơn hàng" : "Orders")
+        </a>
+    </nav>
+    <div style="padding:16px 24px; border-top:1px solid #6b3d3a;">
+        <div class="dropdown mb-2">
+            <button class="nav-link dropdown-toggle border-0 bg-transparent w-100 text-start" data-bs-toggle="dropdown">
+                🌐 @langLabel
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="@Url.Action("SetLanguage", "Home", new { culture = "vi", returnUrl = currentPath })">🇻🇳 Tiếng Việt</a></li>
+                <li><a class="dropdown-item" href="@Url.Action("SetLanguage", "Home", new { culture = "en", returnUrl = currentPath })">🇬🇧 English</a></li>
+            </ul>
+        </div>
+
+        <a class="nav-link" asp-controller="Account" asp-action="Profile">
+            <i class="bi bi-person-circle"></i> @(isVi ? "Tài khoản" : "Account")
+        </a>
+        <a class="nav-link" asp-controller="Home" asp-action="Index">
+            <i class="bi bi-arrow-left-circle"></i> @(isVi ? "Về trang chủ" : "Back to site")
+        </a>
+        <form asp-controller="Account" asp-action="Logout" method="post" class="mt-1">
+            <button type="submit" class="nav-link text-start w-100 border-0 bg-transparent">
+                <i class="bi bi-box-arrow-right"></i> @(isVi ? "Đăng xuất" : "Logout")
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="admin-main">
+    <div class="admin-topbar">
+        <span class="fw-bold" style="color:var(--choco-primary);">
+            <i class="bi bi-speedometer2 me-1"></i> @ViewData["Title"]
+        </span>
+        <span class="text-muted small">
+            <i class="bi bi-person-circle me-1"></i> @User.Identity?.Name
+        </span>
+    </div>
+    <div class="admin-content">
+        @RenderBody()
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
