@@ -21,9 +21,8 @@ namespace ChocoLux.Services
 
             if (!string.IsNullOrEmpty(status))
             {
-                query = status == "Confirmed"
-                    ? query.Where(o => o.OrderStatus == "Confirmed")
-                    : query.Where(o => o.OrderStatus != "Confirmed");
+                if (!string.IsNullOrEmpty(status))
+                    query = query.Where(o => o.OrderStatus == status);
             }
 
             return query
